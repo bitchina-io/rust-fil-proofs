@@ -1,6 +1,8 @@
+use std::time::SystemTime;
 use anyhow::{ensure, Context, Result};
 use filecoin_hashers::Hasher;
 use log::info;
+use rayon::prelude::*;
 use storage_proofs_core::{
     compound_proof::{self, CompoundProof},
     merkle::MerkleTreeTrait,
@@ -129,8 +131,9 @@ pub fn generate_winning_post<Tree: 'static + MerkleTreeTrait>(
         FallbackPoStCompound::setup(&setup_params)?;
     let groth_params = get_post_params::<Tree>(&post_config)?;
 
+    let t = SystemTime::now();
     let trees = replicas
-        .iter()
+        .par_iter()
         .map(|(sector_id, replica)| {
             replica
                 .merkle_tree(post_config.sector_size)
@@ -139,6 +142,11 @@ pub fn generate_winning_post<Tree: 'static + MerkleTreeTrait>(
                 })
         })
         .collect::<Result<Vec<_>>>()?;
+    info!(
+        "winning init tree {} qiniu-time {:?}",
+        trees.len(),
+        t.elapsed()
+    );
 
     let mut pub_sectors = Vec::with_capacity(param_sector_count);
     let mut priv_sectors = Vec::with_capacity(param_sector_count);

@@ -1,7 +1,5 @@
 #![allow(clippy::len_without_is_empty)]
 
-use std::fs::File;
-
 pub use merkletree::store::{DiskStore, ExternalReader, Store};
 
 use filecoin_hashers::Hasher;
@@ -16,7 +14,8 @@ pub use builders::*;
 pub use proof::*;
 pub use tree::*;
 
-pub type LCStore<E> = LevelCacheStore<E, File>;
+use merkletree::store::MixReader;
+pub type LCStore<E> = LevelCacheStore<E, MixReader>;
 
 pub type MerkleStore<T> = DiskStore<T>;
 

@@ -9,6 +9,7 @@ use fr32::{write_unpadded, Fr32Reader};
 use log::{info, trace};
 use memmap::MmapOptions;
 use merkletree::store::{DiskStore, LevelCacheStore, StoreConfig};
+use qiniu::{is_qiniu_enabled, RangeReader};
 use storage_proofs_core::{
     cache_key::CacheKey,
     measurements::{measure_op, Operation},
@@ -706,4 +707,18 @@ where
 
     info!("validate_cache_for_precommit:finish");
     Ok(())
+}
+
+fn read_aux(path: impl AsRef<Path>) -> std::io::Result<Vec<u8>> {
+    let range_reader = if is_qiniu_enabled() {
+        RangeReader::from_env(path.as_ref().to_str().expect("Key must be UTF-8 encoded"))
+    } else {
+        None
+    };
+    if let Some(range_reader) = range_reader.as_ref() {
+        if !path.as_ref().exists() {
+            return range_reader.download();
+        }
+    }
+    std::fs::read(path)
 }

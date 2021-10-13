@@ -36,7 +36,7 @@ blake2s_simd = "0.5.6"
 fil_logger = "0.1"
 log = "0.4.8"
 uom = "0.30"
-merkletree = "0.21.0"
+merkletree = { path = "../../merkle_light" }
 bincode = "1.1.2"
 anyhow = "1.0.23"
 ff = { version = "0.3.1", package = "fff" }
@@ -51,6 +51,8 @@ fdlimit = "0.2.0"
 dialoguer = "0.8.0"
 structopt = "0.3.12"
 humansize = "1.1.0"
+base64-url = "1.4.7"
+fr32 = { path = "../fr32", version = "^2.0.0", default-features = false }
 
 [features]
 default = ["gpu", "measurements", "blst"]

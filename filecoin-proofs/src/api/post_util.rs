@@ -1,5 +1,4 @@
 use std::collections::BTreeMap;
-use std::fs;
 use std::path::Path;
 
 use anyhow::{anyhow, ensure, Context, Result};
@@ -11,6 +10,7 @@ use storage_proofs_core::{
 };
 use storage_proofs_post::fallback::{self, generate_leaf_challenge, FallbackPoSt, SectorProof};
 
+use super::read_aux;
 use crate::{
     api::as_safe_commitment,
     constants::DefaultPieceHasher,
@@ -27,7 +27,7 @@ pub fn clear_cache<Tree: MerkleTreeTrait>(cache_dir: &Path) -> Result<()> {
 
     let t_aux = {
         let f_aux_path = cache_dir.to_path_buf().join(CacheKey::TAux.to_string());
-        let aux_bytes = fs::read(&f_aux_path)
+        let aux_bytes = read_aux(&f_aux_path)
             .with_context(|| format!("could not read from path={:?}", f_aux_path))?;
 
         deserialize(&aux_bytes)

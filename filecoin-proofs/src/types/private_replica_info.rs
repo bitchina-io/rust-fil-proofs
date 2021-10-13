@@ -1,5 +1,4 @@
 use std::cmp::Ordering;
-use std::fs;
 use std::hash::{Hash, Hasher as StdHasher};
 use std::marker::PhantomData;
 use std::path::{Path, PathBuf};
@@ -10,10 +9,11 @@ use filecoin_hashers::Hasher;
 use generic_array::typenum::Unsigned;
 use log::trace;
 use merkletree::store::StoreConfig;
+use qiniu::{is_qiniu_enabled, RangeReader};
 use storage_proofs_core::{
     cache_key::CacheKey,
     merkle::{
-        create_tree, get_base_tree_count, split_config_and_replica, MerkleTreeTrait,
+        create_tree_v2, get_base_tree_count, split_config_and_replica, MerkleTreeTrait,
         MerkleTreeWrapper,
     },
     util::default_rows_to_discard,
@@ -90,13 +90,13 @@ impl<Tree: 'static + MerkleTreeTrait> PrivateReplicaInfo<Tree> {
 
         let aux = {
             let f_aux_path = cache_dir.join(CacheKey::PAux.to_string());
-            let aux_bytes = fs::read(&f_aux_path)
+            let aux_bytes = read_aux(&f_aux_path)
                 .with_context(|| format!("could not read from path={:?}", f_aux_path))?;
 
             deserialize(&aux_bytes)
         }?;
 
-        ensure!(replica.exists(), "Sealed replica does not exist");
+        // ensure!(replica.exists(), "Sealed replica does not exist");
 
         Ok(PrivateReplicaInfo {
             replica,
@@ -167,6 +167,20 @@ impl<Tree: 'static + MerkleTreeTrait> PrivateReplicaInfo<Tree> {
             tree_count,
         )?;
 
-        create_tree::<Tree>(base_tree_size, &configs, Some(&replica_config))
+        create_tree_v2::<Tree>(base_tree_size, &configs, Some(&replica_config), true)
     }
+}
+
+fn read_aux(path: impl AsRef<Path>) -> std::io::Result<Vec<u8>> {
+    let range_reader = if is_qiniu_enabled() {
+        RangeReader::from_env(path.as_ref().to_str().expect("Key must be UTF-8 encoded"))
+    } else {
+        None
+    };
+    if let Some(range_reader) = range_reader.as_ref() {
+        if !path.as_ref().exists() {
+            return range_reader.download();
+        }
+    }
+    std::fs::read(path)
 }
